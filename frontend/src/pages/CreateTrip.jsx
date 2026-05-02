@@ -46,7 +46,13 @@ const CreateTrip = () => {
       setItinerary(Array.isArray(generatedItinerary) ? generatedItinerary : []);
     } catch (err) {
       console.error("Failed to generate itinerary", err);
-      alert("Failed to generate itinerary. Please check your API key.");
+      if (err.response?.status === 401) {
+        localStorage.removeItem("token");
+        navigate("/");
+        return;
+      }
+      const errorMessage = err.response?.data?.message || "Failed to generate itinerary. Please try again.";
+      alert(errorMessage);
     } finally {
       setLoading(false);
     }
