@@ -14,7 +14,7 @@ exports.generateItinerary = async (req, res) => {
 
     try {
         const model = genAI.getGenerativeModel({ 
-            model: "gemini-pro"
+            model: "gemini-2.0-flash"
         });
 
         const prompt = `

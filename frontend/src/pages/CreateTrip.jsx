@@ -1,37 +1,26 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Sparkles, ArrowLeft, Save } from "lucide-react";
+import { Sparkles, ArrowLeft, Send, MapPin, Calendar, Heart, Share2, Plus, Loader2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 const CreateTrip = () => {
   const [formData, setFormData] = useState({
-    title: "",
     destination: "",
     days: 3,
-    budget: 1000,
     interests: "",
   });
   const [itinerary, setItinerary] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ 
-      ...formData, 
-      [name]: name === "days" || name === "budget" ? parseInt(value) || 0 : value 
-    });
+    setFormData({ ...formData, [name]: value });
   };
 
   const generateAIItinerary = async () => {
-    if (!formData.destination || !formData.interests) {
-      alert("Please enter destination and interests first");
-      return;
-    }
+    if (!formData.destination || !formData.interests) return;
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
@@ -45,137 +34,121 @@ const CreateTrip = () => {
       const generatedItinerary = res.data.itinerary || res.data;
       setItinerary(Array.isArray(generatedItinerary) ? generatedItinerary : []);
     } catch (err) {
-      console.error("Failed to generate itinerary", err);
-      if (err.response?.status === 401) {
-        localStorage.removeItem("token");
-        navigate("/");
-        return;
-      }
-      const errorMessage = err.response?.data?.message || "Failed to generate itinerary. Please try again.";
-      alert(errorMessage);
+      if (err.response?.status === 401) navigate("/");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (itinerary.length === 0) {
-      alert("Please generate an itinerary first!");
-      return;
-    }
-    setSaving(true);
-    try {
-      const token = localStorage.getItem("token");
-      await axios.post("http://localhost:5000/api/trips", {
-        ...formData,
-        itinerary
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      navigate("/dashboard");
-    } catch (err) {
-      console.error("Failed to create trip", err);
-    } finally {
-      setSaving(false);
-    }
-  };
-
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="outline" size="icon" onClick={() => navigate("/dashboard")}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <h1 className="text-3xl font-bold">Plan Your New Adventure</h1>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Trip Details</CardTitle>
-            <CardDescription>Tell us where and when you're going.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Trip Title</label>
-              <Input name="title" placeholder="e.g., Summer in Japan" onChange={handleChange} required />
+    <div className="pt-32 pb-20 px-6 max-w-7xl mx-auto flex flex-col items-center">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full space-y-12"
+      >
+        {/* Magic Input Bar */}
+        <div className="magic-box p-8 max-w-4xl mx-auto w-full flex flex-col gap-6">
+          <div className="flex gap-4">
+            <div className="w-14 h-14 bg-black rounded-[1.5rem] flex items-center justify-center flex-shrink-0">
+              <Sparkles className="h-7 w-7 text-white" />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Destination</label>
-              <Input name="destination" placeholder="e.g., Tokyo, Japan" onChange={handleChange} required />
+            <div className="flex-grow space-y-4">
+              <input 
+                name="destination"
+                placeholder="Where to? (e.g. Paris, France)" 
+                className="input-ghost text-4xl font-black uppercase tracking-tighter"
+                onChange={handleChange}
+              />
+              <input 
+                name="interests"
+                placeholder="What's the vibe? (e.g. Art, Coffee, Nightlife)" 
+                className="input-ghost text-xl text-text-muted"
+                onChange={handleChange}
+              />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Days</label>
-                <Input name="days" type="number" value={formData.days} onChange={handleChange} required min="1" />
+          </div>
+          <div className="flex items-center justify-between pt-6 border-t border-border-main">
+            <div className="flex gap-4">
+              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-text-muted">
+                <Calendar className="h-3 w-3" />
+                <input name="days" type="number" value={formData.days} onChange={handleChange} className="w-8 bg-transparent border-none focus:ring-0 outline-none p-0 text-black" /> Days
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Budget ($)</label>
-                <Input name="budget" type="number" value={formData.budget} onChange={handleChange} required min="0" />
-              </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Interests</label>
-              <Input name="interests" placeholder="e.g., Food, Culture, Anime" onChange={handleChange} required />
-              <p className="text-xs text-muted-foreground">Comma-separated list of things you love.</p>
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button 
-              type="button" 
-              onClick={generateAIItinerary} 
-              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+            <button 
+              onClick={generateAIItinerary}
               disabled={loading}
+              className="btn-black flex items-center gap-2"
             >
-              {loading ? (
-                "Generating Magic..."
-              ) : (
-                <>
-                  <Sparkles className="mr-2 h-4 w-4" /> Generate Itinerary with AI
-                </>
-              )}
-            </Button>
-          </CardFooter>
-        </Card>
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Plan Magic"}
+            </button>
+          </div>
+        </div>
 
-        <Card className="flex flex-col">
-          <CardHeader>
-            <CardTitle>Itinerary Preview</CardTitle>
-            <CardDescription>Your AI-generated plan will appear here.</CardDescription>
-          </CardHeader>
-          <CardContent className="flex-grow overflow-auto max-h-[400px]">
-            {itinerary.length > 0 ? (
-              <div className="space-y-6">
+        {/* Results Area */}
+        <AnimatePresence>
+          {itinerary.length > 0 && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="grid grid-cols-1 lg:grid-cols-4 gap-8"
+            >
+              {/* Vertical Timeline */}
+              <div className="lg:col-span-3 space-y-12">
                 {itinerary.map((day, idx) => (
-                  <div key={idx} className="border-l-2 border-primary pl-4 py-1">
-                    <h4 className="font-bold text-lg mb-2 text-primary">Day {day.day}</h4>
-                    <ul className="space-y-1">
+                  <motion.div 
+                    key={idx}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.1 }}
+                    className="space-y-6"
+                  >
+                    <div className="flex items-center gap-4">
+                      <span className="text-4xl font-black tracking-tighter uppercase">Day {day.day}</span>
+                      <div className="h-px bg-border-main flex-grow"></div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {day.activities.map((act, i) => (
-                        <li key={i} className="text-sm text-muted-foreground">• {act}</li>
+                        <div key={i} className="visual-card p-6 flex flex-col justify-between min-h-[160px] group cursor-pointer hover:bg-black hover:text-white">
+                          <div className="flex justify-between items-start">
+                            <span className="text-[10px] font-black uppercase tracking-widest opacity-40 group-hover:opacity-100">09:00 AM</span>
+                            <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Heart className="h-4 w-4" />
+                              <Plus className="h-4 w-4" />
+                            </div>
+                          </div>
+                          <p className="text-lg font-bold leading-tight">{act}</p>
+                        </div>
                       ))}
-                    </ul>
-                  </div>
+                    </div>
+                  </motion.div>
                 ))}
               </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full text-center p-6 bg-muted/30 rounded-lg border-2 border-dashed">
-                <Sparkles className="h-12 w-12 text-muted-foreground mb-4 opacity-20" />
-                <p className="text-muted-foreground italic">
-                  Fill in your details and click generate to see the magic happen!
-                </p>
+
+              {/* Sidebar Summary */}
+              <div className="space-y-6 lg:sticky lg:top-32 h-fit">
+                <div className="visual-card p-8 bg-black text-white space-y-6">
+                  <h3 className="text-2xl font-black uppercase tracking-tighter">Your Vibe</h3>
+                  <div className="space-y-4">
+                    <div className="flex justify-between text-xs font-black uppercase tracking-widest text-white/40">
+                      <span>Destination</span>
+                      <span className="text-white">{formData.destination}</span>
+                    </div>
+                    <div className="flex justify-between text-xs font-black uppercase tracking-widest text-white/40">
+                      <span>Style</span>
+                      <span className="text-white">Custom</span>
+                    </div>
+                  </div>
+                  <button className="w-full btn-magic mt-4">Save Trip</button>
+                  <button className="w-full text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white flex items-center justify-center gap-2">
+                    <Share2 className="h-3 w-3" /> Share Plan
+                  </button>
+                </div>
               </div>
-            )}
-          </CardContent>
-          {itinerary.length > 0 && (
-            <CardFooter className="border-t pt-4">
-              <Button onClick={handleSubmit} className="w-full" disabled={saving}>
-                {saving ? "Saving..." : <><Save className="mr-2 h-4 w-4" /> Save Trip to Dashboard</>}
-              </Button>
-            </CardFooter>
+            </motion.div>
           )}
-        </Card>
-      </div>
+        </AnimatePresence>
+      </motion.div>
     </div>
   );
 };
